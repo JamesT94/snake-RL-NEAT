@@ -1,15 +1,15 @@
 
 [NEAT]
-fitness_criterion     = max
-fitness_threshold     = 500
-pop_size              = 75
+fitness_criterion     = mean
+fitness_threshold     = 100
+pop_size              = 1000
 reset_on_extinction   = False
 
 [DefaultGenome]
 # node activation options
-activation_default      = tanh
+activation_default      = relu
 activation_mutate_rate  = 0.0
-activation_options      = tanh
+activation_options      = relu
 
 # node aggregation options
 aggregation_default     = sum
@@ -46,7 +46,7 @@ node_delete_prob        = 0.2
 
 # network parameters
 num_hidden              = 0
-num_inputs              = 11
+num_inputs              = 12
 num_outputs             = 4
 
 # node response options
@@ -71,10 +71,10 @@ weight_replace_rate     = 0.1
 compatibility_threshold = 3.0
 
 [DefaultStagnation]
-species_fitness_func = max
-max_stagnation       = 20
+species_fitness_func = mean
+max_stagnation       = 15
 species_elitism      = 2
 
 [DefaultReproduction]
-elitism            = 2
-survival_threshold = 0.2
+elitism            = 10
+survival_threshold = 0.1
