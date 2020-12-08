@@ -12,10 +12,12 @@ import neat
 import os
 import matplotlib.pyplot as plt
 import numpy as np
+import pickle
+import math
 
 # Window size
-frame_size_x = 300
-frame_size_y = 300
+frame_size_x = 200
+frame_size_y = 200
 
 clock = pygame.time.Clock()
 
@@ -42,6 +44,7 @@ blue = pygame.Color(0, 0, 255)
 
 # FPS (frames per second) controller
 fps_controller = pygame.time.Clock()
+render_graphics = False
 
 
 def show_score(choice, color, font, size, age_tracker):
@@ -88,7 +91,8 @@ def train_snake(genomes, config):
     # Main logic
     run = True
     while run and len(snakes) > 0:
-        # clock.tick(100)
+        if render_graphics:
+            clock.tick(50)
         age_tracker += 1
 
         for event in pygame.event.get():
@@ -161,8 +165,17 @@ def train_snake(genomes, config):
             if snake.snake_pos[0] < foods[x].food_pos[0]:
                 food_right = 0
 
+            max_dist = math.sqrt(frame_size_x ** 2 + frame_size_y)
+            min_dist = -1 * max_dist
+            food_dist = (snake.snake_pos[0] - foods[x].food_pos[0]) + (snake.snake_pos[1] - foods[x].food_pos[1])
+            food_dist_norm = (food_dist - min_dist) / (max_dist - min_dist)
+
             nn_inputs = [danger_left, danger_right, danger_ahead, direction_up, direction_down, direction_left,
-                         direction_right, food_up, food_down, food_left, food_right]
+                         direction_right, food_up, food_down, food_left, food_right, food_dist_norm]
+
+            # nn_inputs = [snake.snake_pos[0], snake.snake_pos[1], foods[x].food_pos[0], foods[x].food_pos[1]]
+
+            # print(nn_inputs)
 
             output = nets[x].activate(nn_inputs)
 
@@ -198,11 +211,21 @@ def train_snake(genomes, config):
             if snake.direction == 'RIGHT':
                 snake.snake_pos[0] += 10
 
+            # Give some fitness if moving in the right direction
+            # if snake.direction == 'UP' and food_up:
+            #     ge[x].fitness += 0.001
+            # if snake.direction == 'DOWN' and food_down:
+            #     ge[x].fitness += 0.001
+            # if snake.direction == 'LEFT' and food_left:
+            #     ge[x].fitness += 0.001
+            # if snake.direction == 'RIGHT' and food_right:
+            #     ge[x].fitness += 0.001
+
             # Snake body grow and increase age
             snake.age += 1
             snake.snake_body.insert(0, list(snake.snake_pos))
             if snake.snake_pos[0] == foods[x].food_pos[0] and snake.snake_pos[1] == foods[x].food_pos[1]:
-                ge[x].fitness += 10
+                ge[x].fitness += 5
                 foods[x].food_spawn = False
             else:
                 snake.snake_body.pop()
@@ -220,7 +243,13 @@ def train_snake(genomes, config):
                 ge.pop(x)
                 snakes.pop(x)
                 foods.pop(x)
-            if snake.snake_pos[1] < 0 or snake.snake_pos[1] > frame_size_y - 10:
+            elif snake.snake_pos[1] < 0 or snake.snake_pos[1] > frame_size_y - 10:
+                nets.pop(x)
+                ge.pop(x)
+                snakes.pop(x)
+                foods.pop(x)
+            # Living for too long
+            elif snake.age > 500:
                 nets.pop(x)
                 ge.pop(x)
                 snakes.pop(x)
@@ -228,19 +257,15 @@ def train_snake(genomes, config):
             # Touching the snake body
             for block in snake.snake_body[1:]:
                 if snake.snake_pos[0] == block[0] and snake.snake_pos[1] == block[1]:
-                    nets.pop(x)
-                    ge.pop(x)
-                    snakes.pop(x)
-                    foods.pop(x)
-            # Living for too long
-            if snake.age > 1500:
-                nets.pop(x)
-                ge.pop(x)
-                snakes.pop(x)
-                foods.pop(x)
+                    try:
+                        nets.pop(x)
+                        ge.pop(x)
+                        snakes.pop(x)
+                        foods.pop(x)
+                    except:
+                        pass
 
         # GFX
-        render_graphics = False
         if render_graphics:
             game_window.fill(black)
             for snake in snakes:
@@ -265,7 +290,7 @@ def run_snake(config_file):
     stats = neat.StatisticsReporter()
     p.add_reporter(stats)
 
-    winner = p.run(train_snake, 150)
+    winner = p.run(train_snake, 1000)
     print('\nBest genome:\n{!s}'.format(winner))
     plot_stats(stats)
 
